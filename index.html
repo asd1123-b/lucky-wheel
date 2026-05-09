@@ -138,7 +138,7 @@
       const spinAudio = document.getElementById("spinAudio");
       const winAudio = document.getElementById("winAudio");
 
-      const options = ["人體掃地機", "耳環3副", "共龜", "明年再抽一次"];
+      const options = ["人體掃地機", "項鍊3條", "共龜", "明年再抽一次"];
       const colors = ["#BED7DC", "#F3D7CA", "#B3C890", "#FFF8E1"];
       const textColors = ["#3C2A21", "#ff4757", "#3C2A21", "#3C2A21"];
 
@@ -175,7 +175,7 @@
           ctx.rotate(angle + arc / 2);
           ctx.textAlign = "right";
           ctx.fillStyle = textColors[i];
-          ctx.font = "bold 48px sans-serif"; // 針對手機高解析度調整字級
+          ctx.font = "bold 42px sans-serif"; // 針對手機高解析度調整字級
           ctx.fillText(opt, radius - 40, 15);
           ctx.restore();
         });
