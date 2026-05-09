@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>互動抽獎輪盤 - 特別企劃</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+      :root {
+        --primary-color: #ff4757;
+        --secondary-color: #2f3542;
+        --wheel-border: #ffffff;
+        --bg-color: #f1f2f6;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: var(--bg-color);
+        font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+        overflow: hidden;
+      }
+
+      /* 標題與提示 */
+      .header {
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      /* 轉盤容器 */
+      .wheel-box {
+        position: relative;
+        width: 85vw;
+        max-width: 380px;
+        aspect-ratio: 1 / 1;
+      }
+
+      /* 指標設計 */
+      .pointer {
+        position: absolute;
+        top: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 15px solid transparent;
+        border-right: 15px solid transparent;
+        border-top: 35px solid var(--primary-color);
+        z-index: 10;
+        filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.2));
+      }
+
+      /* 轉盤主體 */
+      #wheel {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 5px solid var(--wheel-border);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        transition: transform 6s cubic-bezier(0.2, 0, 0.1, 1); /* 絲滑減速效果 */
+        transform: rotate(0deg);
+      }
+
+      canvas {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+      }
+
+      /* 按鈕設計 */
+      .btn-start {
+        margin-top: 40px;
+        padding: 18px 60px;
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: white;
+        background: linear-gradient(135deg, #ff4757, #ff4757);
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        box-shadow: 0 6px 20px #d4a373;
+        transition: 0.3s;
+      }
+
+      .btn-start:active {
+        transform: scale(0.95);
+      }
+      .btn-start:disabled {
+        background: #ccc;
+        box-shadow: none;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h2>母親節禮物大轉盤</h2>
+      <p>點擊下方按鈕開始抽獎</p>
+    </div>
+
+    <div class="wheel-box">
+      <div class="pointer"></div>
+      <div id="wheel">
+        <canvas id="wheelCanvas"></canvas>
+      </div>
+    </div>
+
+    <button class="btn-start" id="spinBtn">START</button>
+
+    <audio
+      id="spinAudio"
+      loop
+      src="https://www.dropbox.com/scl/fi/lbvvqc4ly81e6mxo26sii/mysound_loop.mp3?rlkey=z7tghb44qvm2e93nv3nfiqyt7&st=h194uv3c&raw=1"
+    ></audio>
+    <audio
+      id="winAudio"
+      src="https://www.dropbox.com/scl/fi/u65vkpaoycxu1ovoxhmpr/win_effect.mp3?rlkey=735yyfncyduq0d1hxkajlndvk&st=x0ilfoqa&raw=1"
+    ></audio>
+
+    <script>
+      const canvas = document.getElementById("wheelCanvas");
+      const ctx = canvas.getContext("2d");
+      const wheel = document.getElementById("wheel");
+      const spinBtn = document.getElementById("spinBtn");
+      const spinAudio = document.getElementById("spinAudio");
+      const winAudio = document.getElementById("winAudio");
+
+      const options = ["人體掃地機", "耳環3副", "共龜", "明年再抽一次"];
+      const colors = ["#BED7DC", "#F3D7CA", "#B3C890", "#FFF8E1"];
+      const textColors = ["#3C2A21", "#ff4757", "#3C2A21", "#3C2A21"];
+
+      let currentRotation = 0;
+      let isSpinning = false;
+
+      // 初始化繪製
+      function init() {
+        const size = canvas.parentElement.offsetWidth;
+        canvas.width = size * 2; // 高解析度
+        canvas.height = size * 2;
+        drawWheel();
+      }
+
+      function drawWheel() {
+        const radius = canvas.width / 2;
+        const arc = (Math.PI * 2) / options.length;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        options.forEach((opt, i) => {
+          const angle = i * arc;
+
+          // 畫扇形
+          ctx.beginPath();
+          ctx.fillStyle = colors[i];
+          ctx.moveTo(radius, radius);
+          ctx.arc(radius, radius, radius, angle, angle + arc);
+          ctx.fill();
+
+          // 畫文字
+          ctx.save();
+          ctx.translate(radius, radius);
+          ctx.rotate(angle + arc / 2);
+          ctx.textAlign = "right";
+          ctx.fillStyle = textColors[i];
+          ctx.font = "bold 48px sans-serif"; // 針對手機高解析度調整字級
+          ctx.fillText(opt, radius - 40, 15);
+          ctx.restore();
+        });
+      }
+
+      function startSpin() {
+        if (isSpinning) return;
+
+        isSpinning = true;
+        spinBtn.disabled = true;
+
+        // 1. 播放旋轉音效 (手機端需在此點擊事件內啟動)
+        spinAudio.currentTime = 0;
+        spinAudio.play();
+
+        // 2. 必中邏輯計算
+        // 目標：「耳環」索引為 1
+        // 轉盤旋轉是順時針，選項在畫布是 0, 90, 180, 270 度
+        // 12點鐘方向(指標) = 270度
+        const segmentDeg = 360 / options.length;
+        const targetIndex = 1; // 耳環
+        const baseSpins = 8 * 360; // 基礎旋轉 8 圈
+
+        // 讓指標指到索引 1 的中間位置：
+        // 指標位置(270) - 選項起始角度(1*90) - 選項一半(45)
+        const stopAngle = 270 - targetIndex * segmentDeg - segmentDeg / 2;
+
+        currentRotation +=
+          baseSpins + stopAngle + (360 - (currentRotation % 360));
+
+        wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+        // 3. 監聽動畫結束
+        setTimeout(() => {
+          stopSpin();
+        }, 6000); // 需與 CSS transition 剩餘時間相符
+      }
+
+      function stopSpin() {
+        isSpinning = false;
+        spinBtn.disabled = false;
+
+        // 停止旋轉音效，播放得獎音效
+        spinAudio.pause();
+        winAudio.play();
+
+        // 觸發全螢幕灑花
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ["#ff4757", "#ffffff", "#ffd700"],
+        });
+
+        // 延遲跳出得獎訊息，讓灑花先飛一下
+        setTimeout(() => {
+          alert("🎉 恭喜您獲得：耳環兌換券！");
+        }, 800);
+      }
+
+      spinBtn.addEventListener("click", startSpin);
+      window.addEventListener("resize", init);
+      init();
+    </script>
+  </body>
+</html>
